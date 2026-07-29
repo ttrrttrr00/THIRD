@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>면세유 사용위반 현황 점검 도구</title>
+  <style>
+    :root{--g:#17563d;--l:#d2eb78;--i:#14261e;--p:#f3f5ef;--b:#d9ded7}*{box-sizing:border-box}
+    body{margin:0;background:var(--p);color:var(--i);font-family:Arial,"Noto Sans KR",sans-serif}
+    header{background:var(--g);color:#fff;padding:54px max(24px,calc((100vw - 1160px)/2)) 75px}
+    h1{font:400 clamp(38px,6vw,70px)/1.05 Georgia,serif;letter-spacing:-.05em;margin:0}h1 em{color:var(--l);font-style:normal}
+    header p{max-width:700px;color:#dce9e2;line-height:1.7}.meta{font-size:12px;color:var(--l);letter-spacing:.12em}
+    main{max-width:1160px;margin:-30px auto 55px;background:#fff;padding:34px 38px;box-shadow:0 15px 45px #16342416}
+    h2{font:400 24px Georgia,serif}.filters{display:grid;grid-template-columns:.8fr 1fr 1.5fr 1fr;gap:14px;background:#f5f7f3;border:1px solid #e1e6df;padding:22px}
+    label{display:flex;flex-direction:column;gap:8px;font-size:12px;font-weight:700;color:#4a574f}
+    input,select{height:44px;border:1px solid #c9d1ca;background:#fff;padding:0 12px;font:inherit}
+    .bar{display:flex;align-items:center;justify-content:space-between;margin:35px 0 16px}.bar div{display:flex;align-items:center;gap:12px}
+    button{border:0;background:var(--i);color:#fff;padding:12px 16px;font-weight:700;cursor:pointer}.reset{background:none;color:var(--g);text-decoration:underline}
+    .count{background:#e8f0e9;color:var(--g);padding:4px 8px;font-size:12px;font-weight:700}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--b)}
+    .stats article{padding:18px;border-right:1px solid var(--b)}.stats article:last-child{border:0}.stats span{font-size:12px;color:#69766f}
+    .stats strong{display:block;margin-top:15px;font:400 25px Georgia,serif}.stats small{font:12px Arial;margin-left:4px;color:#69766f}
+    .table{margin-top:20px;overflow:auto;border-top:2px solid var(--i)}table{width:100%;border-collapse:collapse;min-width:720px}
+    th{background:#f4f6f2}th button{width:100%;background:none;color:#526057;text-align:left;padding:14px;font-size:12px}
+    td{padding:14px;border-bottom:1px solid #e7ebe6;font-size:13px}.num{text-align:right}.pill{background:#ebf2ec;color:var(--g);padding:5px 8px}
+    .empty{text-align:center;padding:50px;color:#6c786f}.notice{margin-top:18px;font-size:12px;color:#69766f}
+    @media(max-width:760px){main{margin:-25px 14px 40px;padding:24px 18px}.filters,.stats{grid-template-columns:1fr 1fr}}
+    @media(max-width:480px){.filters,.stats{grid-template-columns:1fr}.stats article{border-right:0;border-bottom:1px solid var(--b)}}
+  </style>
+</head>
+<body>
+<header>
+  <div class="meta">AGRICULTURAL TAX-FREE FUEL AUDIT · 마지막 갱신 기준 2024년</div>
+  <h1>면세유 사용위반<br><em>현황 점검 도구</em></h1>
+  <p>2022~2024년 농업용 면세유 용도외사용 공개자료를 연도·유종·기종명·최소 위반금액으로 조회하고, 현재 결과를 같은 기준의 CSV로 내려받습니다.</p>
+</header>
+<main>
+  <div class="bar"><h2>조회 조건</h2><button class="reset" id="reset">조건 초기화</button></div>
+  <section class="filters">
+    <label>연도<select id="year"><option value="">전체 연도</option><option>2022</option><option>2023</option><option>2024</option></select></label>
+    <label>유종명<select id="fuel"><option value="">전체 유종</option></select></label>
+    <label>기종명 부분검색<input id="machine" placeholder="예: 트랙터, 건조기"></label>
+    <label>최소 위반금액<input id="minimum" type="number" min="0" placeholder="0"></label>
+  </section>
+  <div class="bar"><div><h2>조회 결과</h2><span class="count" id="count">불러오는 중</span></div><button id="download">CSV 내려받기 ↓</button></div>
+  <section class="stats">
+    <article><span>검색 결과</span><strong id="sCount">0<small>건</small></strong></article>
+    <article><span>위반물량 합계</span><strong id="sVolume">0<small>리터</small></strong></article>
+    <article><span>위반금액 합계</span><strong id="sAmount">0<small>원</small></strong></article>
+    <article><span>가장 많이 나타난 기종</span><strong id="sTop">해당 없음</strong></article>
+  </section>
+  <div class="table"><table><thead><tr><th><button data-sort="year">연도 ↕</button></th><th><button data-sort="fuel">유종명 ↕</button></th><th><button data-sort="machine">기종명 ↕</button></th><th><button data-sort="volume">위반물량 ↕</button></th><th><button data-sort="amount">위반금액 ↓</button></th></tr></thead><tbody id="body"></tbody></table><div class="empty" id="empty" hidden>조건에 맞는 결과가 없습니다.<br>CSV를 내려받으면 컬럼 머리글은 유지됩니다.</div></div>
+  <p class="notice" id="notice">자료를 읽는 중입니다. 원본의 연도·단위·문자 인코딩 차이는 화면에서 정규화됩니다.</p>
+</main>
+<script>
+const ROOT="https://tax-free-fuel-audit.workspace-627361.chatgpt.site/data/";
+const files=[["violations-2022.csv","utf-8"],["violations-2023.csv","euc-kr"],["violations-2024.csv","euc-kr"]];
+const $=id=>document.getElementById(id), nf=new Intl.NumberFormat("ko-KR");
+let data=[], shown=[], sort="amount", dir=-1;
+function csv(text){let rows=[],r=[],c="",q=false;for(let i=0;i<text.length;i++){let x=text[i];if(x=='"'){if(q&&text[i+1]=='"'){c+='"';i++}else q=!q}else if(x==","&&!q){r.push(c);c=""}else if((x=="\n"||x=="\r")&&!q){if(x=="\r"&&text[i+1]=="\n")i++;r.push(c);c="";if(r.some(Boolean))rows.push(r);r=[]}else c+=x}if(c||r.length){r.push(c);rows.push(r)}let h=rows.shift().map(x=>x.replace(/^\uFEFF/,"").trim());return rows.map(v=>Object.fromEntries(h.map((x,i)=>[x,v[i]||""])))}
+function norm(r,i){let n=x=>(x||"").trim().replace(/\s+/g," ");return{id:i,year:+n(r["연도"]).replace(/년$/,""),type:n(r["유형"]),machine:n(r["기종명"]),fuel:n(r["유종명"]),volume:+n(r["위반물량(리터)"]||r["위반물량(L)"]).replace(/,/g,""),amount:+n(r["위반금액(원)"]).replace(/,/g,"")}}
+function render(){let y=$("year").value,f=$("fuel").value,q=$("machine").value.trim().toLowerCase(),m=+$("minimum").value||0;shown=data.filter(x=>(!y||x.year==y)&&(!f||x.fuel==f)&&(!q||x.machine.toLowerCase().includes(q))&&x.amount>=m).sort((a,b)=>{let v=typeof a[sort]=="string"?a[sort].localeCompare(b[sort],"ko"):a[sort]-b[sort];return (v||a.id-b.id)*dir});let vol=shown.reduce((s,x)=>s+x.volume,0),amt=shown.reduce((s,x)=>s+x.amount,0),counts={};shown.forEach(x=>counts[x.machine]=(counts[x.machine]||0)+1);let max=Math.max(0,...Object.values(counts)),top=Object.keys(counts).filter(x=>counts[x]==max).sort().join(" · ")||"해당 없음";$("count").textContent=nf.format(shown.length)+"건";$("sCount").innerHTML=nf.format(shown.length)+"<small>건</small>";$("sVolume").innerHTML=nf.format(vol)+"<small>리터</small>";$("sAmount").innerHTML=nf.format(amt)+"<small>원</small>";$("sTop").textContent=top;$("body").innerHTML=shown.map(x=>`<tr><td>${x.year}</td><td><span class="pill">${x.fuel}</span></td><td>${x.machine}</td><td class="num">${nf.format(x.volume)} L</td><td class="num"><b>${nf.format(x.amount)} 원</b></td></tr>`).join("");$("empty").hidden=shown.length>0}
+function quote(x){x=String(x);return /[",\r\n]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x}
+Promise.all(files.map(async([f,e])=>{let r=await fetch(ROOT+f);if(!r.ok)throw Error(f);return csv(new TextDecoder(e).decode(await r.arrayBuffer()))})).then(a=>{data=a.flat().map(norm).filter(x=>x.year&&x.machine&&x.fuel&&Number.isFinite(x.volume)&&Number.isFinite(x.amount));[...new Set(data.map(x=>x.fuel))].sort().forEach(x=>$("fuel").add(new Option(x,x)));$("notice").textContent=`공개 데이터 ${data.length}행 적재 완료 · 금액 내림차순 기본 정렬`;render()}).catch(()=>$("notice").textContent="데이터를 불러오지 못했습니다. 인터넷 연결 후 새로고침해 주세요.");
+["year","fuel","machine","minimum"].forEach(id=>$(id).addEventListener("input",render));
+$("reset").onclick=()=>{["year","fuel","machine","minimum"].forEach(id=>$(id).value="");sort="amount";dir=-1;render()};
+document.querySelectorAll("[data-sort]").forEach(b=>b.onclick=()=>{let s=b.dataset.sort;if(sort==s)dir*=-1;else{sort=s;dir=(s=="machine"||s=="fuel")?1:-1}render()});
+$("download").onclick=()=>{let h=["연도","유형","기종명","유종명","위반물량(리터)","위반금액(원)"],lines=[h.join(","),...shown.map(x=>[x.year,x.type,x.machine,x.fuel,x.volume,x.amount].map(quote).join(","))],a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\uFEFF"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"}));a.download=`면세유_사용위반_${shown.length}건.csv`;a.click();URL.revokeObjectURL(a.href)};
+</script>
+</body>
+</html>
