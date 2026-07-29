@@ -53,8 +53,8 @@
   <p class="notice" id="notice">자료를 읽는 중입니다. 원본의 연도·단위·문자 인코딩 차이는 화면에서 정규화됩니다.</p>
 </main>
 <script>
-const ROOT="https://tax-free-fuel-audit.workspace-627361.chatgpt.site/data/";
-const files=[["violations-2022.csv","utf-8"],["violations-2023.csv","euc-kr"],["violations-2024.csv","euc-kr"]];
+const ROOT="./data/";
+const files=[["violations-2022.csv","utf-8"],["violations-2023.csv","utf-8"],["violations-2024.csv","utf-8"]];
 const $=id=>document.getElementById(id), nf=new Intl.NumberFormat("ko-KR");
 let data=[], shown=[], sort="amount", dir=-1;
 function csv(text){let rows=[],r=[],c="",q=false;for(let i=0;i<text.length;i++){let x=text[i];if(x=='"'){if(q&&text[i+1]=='"'){c+='"';i++}else q=!q}else if(x==","&&!q){r.push(c);c=""}else if((x=="\n"||x=="\r")&&!q){if(x=="\r"&&text[i+1]=="\n")i++;r.push(c);c="";if(r.some(Boolean))rows.push(r);r=[]}else c+=x}if(c||r.length){r.push(c);rows.push(r)}let h=rows.shift().map(x=>x.replace(/^\uFEFF/,"").trim());return rows.map(v=>Object.fromEntries(h.map((x,i)=>[x,v[i]||""])))}
